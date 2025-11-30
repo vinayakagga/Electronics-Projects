@@ -1,0 +1,5 @@
+In this project I have used an ESP 32 with RC522 and inbuilt led with buzzer to incorporate a system in which we can add HF (13.6 Mhz) rfid cards and name them according to the person . 
+
+After initial registration ,the system tracks entry and exit on a tap .
+
+The demonstration video can be found at https://youtu.be/QWXtsJ97Uw0?si=vLwZl5YmRDE91-7W 
