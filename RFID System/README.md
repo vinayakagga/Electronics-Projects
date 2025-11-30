@@ -6,7 +6,4 @@ The demonstration video:
 
 <p>The demonstration video:</p>
 
-<a href="https://www.youtube.com/watch?v=QWXtsJ97Uw0">
-  <img src="https://img.youtube.com/vi/QWXtsJ97Uw0/hqdefault.jpg" alt="Demo Video" width="680" />
-</a>
-
+[![Demo Video](https://img.youtube.com/vi/QWXtsJ97Uw0/hqdefault.jpg)](https://www.youtube.com/watch?v=QWXtsJ97Uw0)
