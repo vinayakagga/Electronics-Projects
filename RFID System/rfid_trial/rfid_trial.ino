@@ -1,8 +1,3 @@
-/*
- * ESP32 RFID Attendance System with Admin Login
- * Complete implementation with paired entry/exit logs
- */
-
 #include <WiFi.h>
 #include <SPI.h>
 #include <MFRC522.h>
@@ -10,14 +5,10 @@
 #include <ESPAsyncWebServer.h>
 #include <time.h>
 
-// ==============================
-//  CONFIG
-// ==============================
+const char* ssid = "SSID";
+const char* password = "Password";
 
-const char* ssid = "Vinayak(front)";
-const char* password = "surya9953538353";
 
-// Admin credentials
 const char* ADMIN_USER = "admin";
 const char* ADMIN_PASS = "admin123";
 
@@ -38,14 +29,11 @@ String lastScannedUID = "";
 unsigned long lastScanTime = 0;
 const unsigned long SCAN_COOLDOWN = 5000;
 
-// Session management
 String sessionToken = "";
 unsigned long sessionExpiry = 0;
 const unsigned long SESSION_DURATION = 3600000; // 1 hour
 
-// ==============================
-//  TIME SYSTEM (non-blocking)
-// ==============================
+
 
 unsigned long lastTimeUpdate = 0;
 String currentTimeString = "Loading...";
@@ -73,9 +61,7 @@ void setupNTP() {
   Serial.println("NTP configured");
 }
 
-// ==============================
-//  SESSION MANAGEMENT
-// ==============================
+
 
 String generateToken() {
   String token = "";
@@ -100,9 +86,7 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
   return false;
 }
 
-// ==============================
-//  SPIFFS HELPERS
-// ==============================
+
 
 String readFileFast(const char* path) {
   File file = SPIFFS.open(path, "r");
@@ -218,9 +202,7 @@ void setUserStatus(String uid, String newStatus) {
   writeFileFast(STATUS_FILE, newStatusFile);
 }
 
-// ==============================
-//  LOG PAIRING SYSTEM
-// ==============================
+
 
 void updatePairedLog(String uid, String name, String timestamp, String type) {
   String logs = readFileFast(LOGS_FILE);
@@ -235,7 +217,7 @@ void updatePairedLog(String uid, String name, String timestamp, String type) {
     String line = logs.substring(start, end);
     
     if (line.length() > 0) {
-      // Parse: UID|Name|EntryTime|ExitTime|Duration
+
       int p1 = line.indexOf('|');
       int p2 = line.indexOf('|', p1 + 1);
       int p3 = line.indexOf('|', p2 + 1);
@@ -245,13 +227,11 @@ void updatePairedLog(String uid, String name, String timestamp, String type) {
         String lineUID = line.substring(0, p1);
         String exitTime = (p3 != -1) ? line.substring(p3 + 1, p4 != -1 ? p4 : line.length()) : "";
         
-        // If this UID has an open entry (no exit), update it
         if (lineUID == uid && exitTime == "" && type == "EXIT" && !updated) {
           String lineName = line.substring(p1 + 1, p2);
           String entryTime = line.substring(p2 + 1, p3);
           
-          // Calculate duration
-          long duration = 0; // In minutes (simplified)
+          long duration = 0; 
           newLogs += uid + "|" + lineName + "|" + entryTime + "|" + timestamp + "|Calculated\n";
           updated = true;
           start = end + 1;
@@ -266,7 +246,6 @@ void updatePairedLog(String uid, String name, String timestamp, String type) {
     start = end + 1;
   }
   
-  // If EXIT but no open entry found, or if ENTRY, add new line
   if (!updated) {
     if (type == "ENTRY") {
       newLogs += uid + "|" + name + "|" + timestamp + "||Ongoing\n";
@@ -278,9 +257,7 @@ void updatePairedLog(String uid, String name, String timestamp, String type) {
   writeFileFast(LOGS_FILE, newLogs);
 }
 
-// ==============================
-//  RFID HANDLING
-// ==============================
+
 
 void beep(int times, int duration = 100) {
   for (int i = 0; i < times; i++) {
@@ -337,9 +314,7 @@ void handleRFID() {
   Serial.println(name + " - " + logType);
 }
 
-// ==============================
-//  WEB SERVER
-// ==============================
+
 
 const char LOGIN_PAGE[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -612,7 +587,6 @@ loadLogs();
 )rawliteral";
 
 void setupWebServer() {
-  // Login page
   server.on("/login", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (request->hasParam("username") && request->hasParam("password")) {
       String user = request->getParam("username")->value();
@@ -633,7 +607,7 @@ void setupWebServer() {
     }
   });
   
-  // Logout
+
   server.on("/logout", HTTP_GET, [](AsyncWebServerRequest *request) {
     sessionToken = "";
     sessionExpiry = 0;
@@ -643,7 +617,6 @@ void setupWebServer() {
     request->send(response);
   });
   
-  // Main page (protected)
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!isAuthenticated(request)) {
       AsyncWebServerResponse *response = request->beginResponse(302);
@@ -654,7 +627,7 @@ void setupWebServer() {
     request->send_P(200, "text/html", MAIN_PAGE);
   });
   
-  // Protected endpoints
+
   server.on("/getUID", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!isAuthenticated(request)) return request->send(401, "text/plain", "Unauthorized");
     request->send(200, "text/plain", lastUnknownUID.length() > 0 ? lastUnknownUID : "NONE");
@@ -767,7 +740,6 @@ void setupWebServer() {
       
       String line = logs.substring(start, end);
       if (line.length() > 0) {
-        // Parse: UID|Name|EntryTime|ExitTime|Status
         int p1 = line.indexOf('|');
         int p2 = line.indexOf('|', p1 + 1);
         int p3 = line.indexOf('|', p2 + 1);
@@ -802,7 +774,7 @@ void setupWebServer() {
     String logs = readFileFast(LOGS_FILE);
     if (logs == "") logs = "UID,Name,Entry Time,Exit Time,Status\n";
     
-    // Convert to CSV format
+
     String csv = "UID,Name,Entry Time,Exit Time,Status\n";
     int start = 0;
     while (start < logs.length()) {
@@ -831,9 +803,7 @@ void setupWebServer() {
   Serial.println("Web server started!");
 }
 
-// ==============================
-//  SETUP
-// ==============================
+
 
 void setup() {
   Serial.begin(115200);
@@ -844,19 +814,16 @@ void setup() {
   digitalWrite(LED_PIN, LOW);
   digitalWrite(BUZZER_PIN, LOW);
   
-  // SPIFFS
   if (!SPIFFS.begin(true)) {
     Serial.println("SPIFFS Mount Failed");
     return;
   }
   Serial.println("SPIFFS Mounted");
   
-  // Initialize files
   if (!SPIFFS.exists(CARDS_FILE)) writeFileFast(CARDS_FILE, "");
   if (!SPIFFS.exists(STATUS_FILE)) writeFileFast(STATUS_FILE, "");
   if (!SPIFFS.exists(LOGS_FILE)) writeFileFast(LOGS_FILE, "");
   
-  // WiFi
   Serial.print("Connecting to WiFi");
   WiFi.begin(ssid, password);
   int attempts = 0;
@@ -874,15 +841,12 @@ void setup() {
     Serial.println("\nWiFi Connection Failed!");
   }
   
-  // NTP
   setupNTP();
   
-  // RFID
   SPI.begin();
   mfrc522.PCD_Init();
   Serial.println("RFID Ready");
   
-  // Web Server
   setupWebServer();
   
   beep(2, 100);
@@ -890,9 +854,7 @@ void setup() {
   Serial.println("Login: admin / admin123");
 }
 
-// ==============================
-//  LOOP
-// ==============================
+
 
 void loop() {
   updateTimeNonBlocking();
